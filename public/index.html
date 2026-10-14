@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Личный кабинет</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f5fa;color:#17243b;font:16px system-ui,sans-serif}header{padding:24px 6%;font-weight:750;border-bottom:1px solid #dce3ee;background:white}header span{color:#526de2}main{max-width:460px;margin:64px auto;padding:32px;background:white;border:1px solid #e1e7f0;border-radius:20px;box-shadow:0 12px 40px #23355708}h1{font-size:28px;margin:8px 0 12px}p{color:#65718a;line-height:1.6}label{display:block;margin-top:20px;font-weight:600;font-size:14px}input{width:100%;margin-top:8px;padding:13px;border:1px solid #bac5d7;border-radius:8px;font:inherit}button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:13px;background:#405cdb;color:white;width:100%;margin-top:24px}button:disabled{opacity:.6;cursor:wait}button.secondary{background:#eef1ff;color:#354eb7;margin-top:12px}a{color:#405cdb}#message{min-height:24px;color:#a12a32;font-size:14px}#message.success{color:#147248}[hidden]{display:none!important}small{display:block;color:#65718a;margin-top:8px}input:focus,button:focus-visible{outline:3px solid #a9b7ff;outline-offset:2px}@media(max-width:520px){main{margin:32px 16px;padding:24px}}
+</style>
+<header><span>ЛК</span> / Личный кабинет</header>
+<main>
+<section id="auth"><h1 id="title">Личный кабинет</h1><p id="intro">Войдите, чтобы открыть личный кабинет.</p>
+<form id="form"><label>E-mail<input id="email" type="email" autocomplete="email" maxlength="254" required></label><label>Пароль<input id="password" type="password" autocomplete="current-password" minlength="12" maxlength="128" required></label><small>От 12 до 128 символов</small><button id="submit">Войти</button></form>
+<button class="secondary" id="toggle">Создать аккаунт</button></section>
+<section id="profile" hidden><h1>Личный кабинет</h1><p>Вы успешно вошли в аккаунт.</p><label>E-mail</label><p id="profile-email"></p><label>Дата регистрации</label><p id="profile-date"></p><button id="logout" class="secondary">Выйти</button></section>
+<p id="message" role="status" aria-live="polite"></p>
+</main>
+<script>
+const $=id=>document.getElementById(id);let register=false;
+function message(text,success=false){$('message').textContent=text;$('message').className=success?'success':''}
+function mode(){ $('title').textContent=register?'Создать аккаунт':'Личный кабинет';$('intro').textContent=register?'Зарегистрируйтесь с помощью e-mail и пароля.':'Войдите, чтобы открыть личный кабинет.';$('submit').textContent=register?'Зарегистрироваться':'Войти';$('toggle').textContent=register?'Уже есть аккаунт? Войти':'Создать аккаунт';$('password').autocomplete=register?'new-password':'current-password';message('') }
+function showUser(user){$('auth').hidden=!!user;$('profile').hidden=!user;if(user){$('profile-email').textContent=user.email;$('profile-date').textContent=new Date(user.created_at.replace(' ','T')+'Z').toLocaleDateString('ru-RU')} }
+async function api(path,data){const response=await fetch('/api/'+path,{method:data?'POST':'GET',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined});const body=await response.json();if(!response.ok)throw new Error(body.error);return body}
+$('toggle').onclick=()=>{register=!register;mode()};
+$('form').onsubmit=async event=>{event.preventDefault();$('submit').disabled=true;$('toggle').disabled=true;message('');try{const body=await api(register?'register':'login',{email:$('email').value,password:$('password').value});$('password').value='';if(register){register=false;mode();message('Аккаунт создан. Теперь войдите с вашим паролем.',true)}else{showUser(body.user)}}catch(error){message(error.message)}finally{$('submit').disabled=false;$('toggle').disabled=false}};
+$('logout').onclick=async()=>{$('logout').disabled=true;try{await api('logout',{});showUser(null);message('Вы вышли из аккаунта.',true)}catch(error){message(error.message)}finally{$('logout').disabled=false}};
+fetch('/api/me').then(async response=>{if(response.ok)showUser((await response.json()).user);else if(response.status!==401)message('Не удалось проверить сессию. Обновите страницу.')}).catch(()=>message('Сервер недоступен. Обновите страницу.'));
+</script>
+</html>
